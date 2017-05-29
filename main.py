@@ -4,27 +4,29 @@ import time
 import os
 from datetime import datetime
 
-def read_data(outputFile):
+FILE_SIZE_LIMIT_IN_BYTES = 1000
+LAST_CHANGE_ELAPSED_TIME_LIMIT = 10
+
+def write_data(outputFile):
     f = open(outputFile, "w")
     for i in range(10):
         call(['sleep', '3']) 
-        call(['echo', str(i)], stdout=f) 
+        call(['echo', 'writing file...' + str(i)], stdout=f) 
 
 
 def do_task(outputFile):
-    task = Process(target=read_data, args=(outputFile,))
+    task = Process(target=write_data, args=(outputFile,))
     task.start()
     while True:
         time.sleep(1)
         modificationDate = modification_date(outputFile)
         secondsSinceLastWrite = (datetime.now() - modificationDate).total_seconds()
-        fileSize = os.path.getsize(outputFile)
-        if secondsSinceLastWrite > 10:
-            return 
-        else :
-            yield fileSize, secondsSinceLastWrite, task
+        fileSizeInBytes = os.path.getsize(outputFile)
+        stillProcessing = task.is_alive()
+        yield fileSizeInBytes, secondsSinceLastWrite, stillProcessing, task
 
-    task.join()
+    # print 'finalizou'
+    # task.join()
 
 
 def modification_date(filename):
@@ -34,10 +36,24 @@ def modification_date(filename):
 
 if __name__ == '__main__':
     outputFile = "blah.txt"
-    for fileSize, secondsSinceLastWrite, task in do_task(outputFile):
-       print fileSize, secondsSinceLastWrite, task 
-       if fileSize > 5:
+    for fileSizeInBytes, secondsSinceLastWrite, stillProcessing, task in do_task(outputFile):
+        print fileSizeInBytes, secondsSinceLastWrite, stillProcessing, task 
+        if not stillProcessing:
+            print 'process is done!'
+            break
+
+        if secondsSinceLastWrite > LAST_CHANGE_ELAPSED_TIME_LIMIT:
+            print 'too long without writing anything'
+            break 
+
+        if fileSizeInBytes > FILE_SIZE_LIMIT_IN_BYTES:
            print 'file size limit exceeded, finish him!'
            task.terminate()
+           break
+
+    print " process is alive? R={alive}".format(alive=task.is_alive())
+
+    # if anything goes wrong, wait for the process to finish
+    task.join()
 
     print 'done!'

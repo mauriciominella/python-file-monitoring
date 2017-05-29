@@ -25,9 +25,6 @@ def do_task(outputFile):
         stillProcessing = task.is_alive()
         yield fileSizeInBytes, secondsSinceLastWrite, stillProcessing, task
 
-    # print 'finalizou'
-    # task.join()
-
 
 def modification_date(filename):
     t = os.path.getmtime(filename)
